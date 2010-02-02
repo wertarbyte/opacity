@@ -1,9 +1,21 @@
 #!/usr/bin/perl
 #
-# Retrieve books and their return date
-# from the public library in Duisburg, German
+# Retrieve borrowed books and their return date
+# from the public library in Duisburg, Germany
 #
-# by Stefan Tomanek <stefan@pico.ruhr.de
+# by Stefan Tomanek <stefan@pico.ruhr.de>
+#
+# Usage:
+#
+# Display all books borrowed by <USERNAME>:
+#
+#   opacity.pl -u USERNAME -p PASSWORD --all
+#
+# Only display books that are due in the next 4 days:
+#
+#   opacity.pl -u USERNAME -p PASSWORD --due --limit 4
+#
+# (very handy for a cronjob)
 
 use strict;
 
@@ -32,11 +44,11 @@ unless (defined $user && defined $pass) {
     die "No user information given.";
 }
 
+# enforce default operation procedure
 unless ($all || $due) {
     $all = 1;
     $due = 0;
 }
-
 
 my $ua = new LWP::UserAgent();
 $ua->cookie_jar( {} );
