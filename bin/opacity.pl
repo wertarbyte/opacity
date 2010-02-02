@@ -9,11 +9,29 @@ use strict;
 
 use LWP::UserAgent;
 use HTML::TreeBuilder::XPath;
-use Date::Parse;
-use Data::Dumper;
+use Date::Calc qw(:all);
+use Date::Format;
+use Getopt::Long;
 
-my $user = $ARGV[0];
-my $pass = $ARGV[1];
+my ($user, $pass);
+# what to show
+my $all = 1;
+my $due = 1;
+# show books 4 days before they are due
+my $limit = 4;
+
+GetOptions(
+    "user|username|u=s" => \$user,
+    "pass|password|p=s" => \$pass,
+    "all|a!"            => \$all,
+    "due|d!"            => \$due,
+    "limit|l=i"         => \$limit
+) || die "Unable to parse command line!";
+
+unless (defined $user && defined $pass) {
+    die "No user information given.";
+}
+
 
 my $ua = new LWP::UserAgent();
 $ua->cookie_jar( {} );
@@ -34,14 +52,6 @@ sub get_book_details {
     }
 }
 
-sub parse_date {
-    my ($datestr) = @_;
-    if ($datestr =~ s/^([0-9]{2})\.([0-9]{2})\.([0-9]{4})$/\3:\2:\1/) {
-        return str2time($datestr);
-    }
-    return undef;
-}
-
 sub get_books {
     my ($user, $pass) = @_;
     # FUNC: login medk vorm gebk kurz
@@ -59,7 +69,7 @@ sub get_books {
         my $data = $r->decoded_content();
         my $tree = HTML::TreeBuilder::XPath->new;
         $tree->parse( $data );
-        my @dates = map { parse_date($_) } $tree->findnodes_as_strings( '//form/table/tr/td[3]' );
+        my @dates = map { [ Decode_Date_EU($_) ] } $tree->findnodes_as_strings( '//form/table/tr/td[3]' );
         my @codes = $tree->findnodes_as_strings( '//form/table/tr/td[4]' );
         my @titles = $tree->findnodes_as_strings( '//form/table/tr/td[7]' );
         my @ids = $tree->findvalues( '//form/table/tr/td/a/@href' );
@@ -78,4 +88,21 @@ sub get_books {
     return @books;
 }
 
-print Dumper( [ get_books($user, $pass) ] );
+sub show_book {
+    my ($book) = @_;
+    my @now = Today();
+    my @return = @{ $book->{returndate} };
+    
+    my @time = localtime( Date_to_Time(@return,0,0,0) );
+    my $strReturn = strftime('%Y-%m-%d', @time );
+    my $daysLeft = Delta_Days(@now, @return);
+
+    if ($all || $daysLeft <= $limit) {
+        print " == ".$book->{title}." [".$book->{barcode}."] == \n";
+        print $strReturn, " -> $daysLeft days left\n\n";
+    }
+}
+
+for ( get_books($user, $pass) ) {
+    show_book($_);
+}
