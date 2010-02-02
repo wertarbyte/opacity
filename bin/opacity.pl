@@ -15,8 +15,8 @@ use Getopt::Long;
 
 my ($user, $pass);
 # what to show
-my $all = 1;
-my $due = 1;
+my $all = 0;
+my $due = 0;
 # show books 4 days before they are due
 my $limit = 4;
 
@@ -30,6 +30,11 @@ GetOptions(
 
 unless (defined $user && defined $pass) {
     die "No user information given.";
+}
+
+unless ($all || $due) {
+    $all = 1;
+    $due = 0;
 }
 
 
