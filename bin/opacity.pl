@@ -9,7 +9,7 @@ use strict;
 
 use LWP::UserAgent;
 use HTML::TreeBuilder::XPath;
-use Date::Calc qw(:all);
+use Date::Calc qw(Decode_Date_EU Today Date_to_Time Delta_Days);
 use Date::Format;
 use Getopt::Long;
 
