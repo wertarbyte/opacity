@@ -33,37 +33,40 @@ sub get_book_details {
     }
 }
 
-# FUNC: login medk vorm gebk kurz
-my $r = $ua->post(
-    "http://opac.stadtbibliothek.duisburg.de/opac/user.C",
-    {
-        FUNC     => 'medk',
-        BENUTZER => $user,
-        PASSWORD => $pass
-    }
-);
+sub get_books {
+    my ($user, $pass) = @_;
+    # FUNC: login medk vorm gebk kurz
+    my $r = $ua->post(
+        "http://opac.stadtbibliothek.duisburg.de/opac/user.C",
+        {
+            FUNC     => 'medk',
+            BENUTZER => $user,
+            PASSWORD => $pass
+        }
+    );
 
-my @books;
-
-if ($r->is_success) {
-    my $data = $r->decoded_content();
-    my $tree = HTML::TreeBuilder::XPath->new;
-    $tree->parse( $data );
-    my @dates = $tree->findnodes_as_strings( '//form/table/tr/td[3]' );
-    my @codes = $tree->findnodes_as_strings( '//form/table/tr/td[4]' );
-    my @titles = $tree->findnodes_as_strings( '//form/table/tr/td[7]' );
-    my @ids = $tree->findvalues( '//form/table/tr/td/a/@href' );
-    while (@dates) {
-        my ($id) = (pop @ids) =~ m/'([0-9]+)'/g;
-        push @books, {
-            returndate => pop @dates,
-            barcode    => pop @codes,
-            title      => pop @titles,
-            details    => get_book_details($ua, $id)
-        };
+    my @books;
+    if ($r->is_success) {
+        my $data = $r->decoded_content();
+        my $tree = HTML::TreeBuilder::XPath->new;
+        $tree->parse( $data );
+        my @dates = $tree->findnodes_as_strings( '//form/table/tr/td[3]' );
+        my @codes = $tree->findnodes_as_strings( '//form/table/tr/td[4]' );
+        my @titles = $tree->findnodes_as_strings( '//form/table/tr/td[7]' );
+        my @ids = $tree->findvalues( '//form/table/tr/td/a/@href' );
+        while (@dates) {
+            my ($id) = (pop @ids) =~ m/'([0-9]+)'/g;
+            push @books, {
+                returndate => pop @dates,
+                barcode    => pop @codes,
+                title      => pop @titles,
+                details    => get_book_details($ua, $id)
+            };
+        }
+    } else {
+        die $r->status_line;
     }
-} else {
-    die $r->status_line;
+    return @books;
 }
 
-print Dumper( \@books );
+print Dumper( [ get_books($user, $pass) ] );
