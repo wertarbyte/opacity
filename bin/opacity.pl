@@ -33,13 +33,16 @@ my $due = 0;
 # show books 4 days before they are due
 my $limit = 4;
 
+my $details = 0;
+
 GetOptions(
     "user|username|u=s" => \$user,
     "pass|password|p=s" => \$pass,
     "readpassword|r!"   => \$read_pw,
     "all|a!"            => \$all,
     "due|d!"            => \$due,
-    "limit|l=i"         => \$limit
+    "limit|l=i"         => \$limit,
+    "details!"          => \$details
 ) || die "Unable to parse command line!";
 
 if ($read_pw) {
@@ -123,7 +126,11 @@ sub show_book {
 
     if ($all || $daysLeft <= $limit) {
         print " == ".$book->{title}." [".$book->{barcode}."] == \n";
-        print $strReturn, " -> $daysLeft days left\n\n";
+        if ($details) {
+            print " > ".$book->{details}{title}." <\n";
+        }
+        print $strReturn, " -> $daysLeft days left\n";
+        print "\n";
     }
 }
 
