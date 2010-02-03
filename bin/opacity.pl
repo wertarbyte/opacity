@@ -26,6 +26,7 @@ use Date::Format;
 use Getopt::Long;
 
 my ($user, $pass);
+my $read_pw = 0;
 # what to show
 my $all = 0;
 my $due = 0;
@@ -35,10 +36,16 @@ my $limit = 4;
 GetOptions(
     "user|username|u=s" => \$user,
     "pass|password|p=s" => \$pass,
+    "readpassword|r!"   => \$read_pw,
     "all|a!"            => \$all,
     "due|d!"            => \$due,
     "limit|l=i"         => \$limit
 ) || die "Unable to parse command line!";
+
+if ($read_pw) {
+    $pass = <STDIN>;
+    chomp $pass;
+}
 
 unless (defined $user && defined $pass) {
     die "No user information given.";
