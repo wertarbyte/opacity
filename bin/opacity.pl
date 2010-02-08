@@ -15,6 +15,10 @@
 #
 #   opacity.pl -u USERNAME -p PASSWORD --due --limit 4
 #
+# Generate an ical calendar file with the return dates:
+#
+#   opacity.pl -u USERNAME -p PASSWORD --all -c
+#
 # (very handy for a cronjob)
 
 use strict;
@@ -24,6 +28,9 @@ use HTML::TreeBuilder::XPath;
 use Date::Calc qw(Decode_Date_EU Today Date_to_Time Delta_Days);
 use Date::Format;
 use Getopt::Long;
+use Data::ICal;
+use Data::ICal::Entry::Event;
+use Date::ICal;
 
 my ($user, $pass);
 my $read_pw = 0;
@@ -35,6 +42,9 @@ my $limit = 4;
 
 my $details = 0;
 
+# generate ical calendar
+my $ical = 0;
+
 GetOptions(
     "user|username|u=s" => \$user,
     "pass|password|p=s" => \$pass,
@@ -42,7 +52,8 @@ GetOptions(
     "all|a!"            => \$all,
     "due|d!"            => \$due,
     "limit|l=i"         => \$limit,
-    "details!"          => \$details
+    "details!"          => \$details,
+    "ical|calendar|c"   => \$ical
 ) || die "Unable to parse command line!";
 
 if ($read_pw) {
@@ -115,25 +126,53 @@ sub get_books {
     return @books;
 }
 
-sub show_book {
-    my ($book) = @_;
-    my @now = Today();
-    my @return = @{ $book->{returndate} };
-    
-    my @time = localtime( Date_to_Time(@return,0,0,0) );
-    my $strReturn = strftime('%Y-%m-%d', @time );
-    my $daysLeft = Delta_Days(@now, @return);
+sub show_text {
+    my (@books) = @_;
+    for my $book (@books) {
+        my @now = Today();
+        my @return = @{ $book->{returndate} };
+        
+        my @time = localtime( Date_to_Time(@return,0,0,0) );
+        my $strReturn = strftime('%Y-%m-%d', @time );
+        my $daysLeft = Delta_Days(@now, @return);
 
-    if ($all || $daysLeft <= $limit) {
-        print " == ".$book->{title}." [".$book->{barcode}."] == \n";
-        if ($details) {
-            print " > ".$book->{details}{title}." <\n";
+        if ($all || $daysLeft <= $limit) {
+            print " == ".$book->{title}." [".$book->{barcode}."] == \n";
+            if ($details) {
+                print " > ".$book->{details}{title}." <\n";
+            }
+            print $strReturn, " -> $daysLeft days left\n";
+            print "\n";
         }
-        print $strReturn, " -> $daysLeft days left\n";
-        print "\n";
     }
 }
 
-for ( get_books($user, $pass) ) {
-    show_book($_);
+sub show_calendar {
+    my (@books) = @_;
+    my $cal = new Data::ICal;
+    $cal->add_properties(
+        "X-WR-CALDESC" => "Book returns"
+    );
+
+    for my $book (@books) {
+        my @d = @{ $book->{returndate} };
+        my %date = (year=>$d[0], month=>$d[1], day=>$d[2]);
+
+        my $e = Data::ICal::Entry::Event->new();
+        $e->add_properties(
+            summary => "Return your book",
+            description => "[".$book->{barcode}."] ".$book->{title},
+            dtstart => Date::ICal->new(%date)->ical,
+        );
+        $cal->add_entry($e);
+    }
+    
+    print $cal->as_string;
+}
+
+my @books = get_books($user, $pass);
+if ($ical) {
+    show_calendar(@books);
+} else {
+    show_text(@books);
 }
