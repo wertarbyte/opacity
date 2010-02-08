@@ -25,7 +25,7 @@ use strict;
 
 use LWP::UserAgent;
 use HTML::TreeBuilder::XPath;
-use Date::Calc qw(Decode_Date_EU Today Date_to_Time Delta_Days);
+use Date::Calc qw(Decode_Date_EU Today Date_to_Time Delta_Days Add_Delta_Days);
 use Date::Format;
 use Getopt::Long;
 use Data::ICal;
@@ -156,14 +156,20 @@ sub show_calendar {
 
     for my $book (@books) {
         my @d = @{ $book->{returndate} };
-        my %date = (year=>$d[0], month=>$d[1], day=>$d[2]);
+        my @ed = Add_Delta_Days(@d, 1);
 
         my $e = Data::ICal::Entry::Event->new();
         $e->add_properties(
             summary => "Return your book",
             description => "[".$book->{barcode}."] ".$book->{title},
-            dtstart => Date::ICal->new(%date)->ical,
         );
+        my @time = localtime( Date_to_Time(@d,0,0,0) );
+        my $date = strftime('%Y%m%d', @time );
+        $e->add_property( DTSTART => [ $date, { VALUE => 'DATE' } ] );
+
+        my @etime = localtime( Date_to_Time(@ed,0,0,0) );
+        my $edate = strftime('%Y%m%d', @etime );
+        $e->add_property( DTEND => [ $edate, { VALUE => 'DATE' } ] );
         $cal->add_entry($e);
     }
     
