@@ -73,6 +73,7 @@ unless ($all || $due) {
 
 my $ua = new LWP::UserAgent();
 $ua->cookie_jar( {} );
+push @{ $ua->requests_redirectable() }, "POST";
 
 sub get_book_details {
     my ($ua, $id) = @_;
